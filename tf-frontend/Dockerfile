@@ -21,7 +21,7 @@ RUN npm run build
 FROM nginx:alpine
 
 # Copiar build de Angular
-COPY --from=build /app/dist/tf-frontend /usr/share/nginx/html
+COPY --from=build /app/dist/tf-frontend/browser /usr/share/nginx/html
 
 # Copiar configuración de nginx
 COPY nginx.conf /etc/nginx/conf.d/default.conf
