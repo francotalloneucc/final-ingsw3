@@ -77,33 +77,7 @@ async def register_empresa(
     user = user_service.create_empresa_simple(empresa_create, profile_picture)
     return user
 
-# 🆕 ENDPOINT PROXY - Analizar CV (para uso del frontend durante registro)
-@router.post("/analyze-cv")
-async def analyze_cv_proxy(
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db)
-):
-    """
-    Endpoint proxy para analizar CVs. El frontend llama a este endpoint
-    y UserAPI se encarga de comunicarse con CvAnalyzerAPI con el API key correcto.
-    """
-    user_service = UserService(db)
-
-    # Usar el método existente que ya maneja el API key
-    result = user_service.analyze_cv_with_api(file)
-
-    if result is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El archivo no es un CV válido o no se pudo analizar"
-        )
-
-    return {
-        "valid": True,
-        "data": result
-    }
-
-# ⭐ ENDPOINT UNIFICADO - Completar cualquier tipo de registro
+# ⭐ ENDPOINT UNIFICADO - Completar cualquier tipo de registro (DEPRECATED - ya no se usa)
 @router.post("/complete-registration", response_model=UserResponse)
 async def complete_registration(
     email: str = Form(...),

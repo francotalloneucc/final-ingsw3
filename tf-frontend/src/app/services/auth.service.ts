@@ -58,13 +58,6 @@ export interface AuthResponse {
   token_type: string;
 }
 
-// NUEVO: Interface para respuesta de CvAnalyzer
-export interface CvAnalysisResponse {
-  valid: boolean;
-  message: string;
-  data?: any;
-}
-
 @Injectable({
   providedIn: 'root'
 })
@@ -121,26 +114,6 @@ export class AuthService {
       localStorage.removeItem('token');
     }
     this.isLoggedInSubject.next(false);
-  }
-
-  // NUEVO: Analizar CV con IA (usando endpoint proxy de UserAPI)
-  analyzeCv(cvFile: File): Observable<CvAnalysisResponse> {
-    const formData = new FormData();
-    formData.append('file', cvFile);
-
-    // Llamar al endpoint proxy de UserAPI en lugar de CvAnalyzerAPI directamente
-    return this.http.post<CvAnalysisResponse>(`${this.baseUrl}/analyze-cv`, formData);
-  }
-
-  // NUEVO: Validar solo si el CV es válido (sin obtener datos)
-  validateCvOnly(cvFile: File): Observable<boolean> {
-    return this.analyzeCv(cvFile).pipe(
-      map(result => result.valid === true),
-      catchError((error) => {
-        console.error('Error validando CV:', error);
-        return of(false);
-      })
-    );
   }
 
   // Registro de candidatos (simplificado - sin CV)

@@ -4,7 +4,6 @@ from fastapi import HTTPException, status, UploadFile, BackgroundTasks
 from typing import List, Optional, TYPE_CHECKING  # ⭐ CORREGIDO: Agregado TYPE_CHECKING
 import os
 import uuid
-import requests
 # IMPORTS para email verification
 import smtplib
 from email.mime.text import MIMEText
@@ -287,50 +286,7 @@ class UserService:
         from models import User
         return self.db.query(User).offset(skip).limit(limit).all()
 
-    def analyze_cv_with_api(self, cv_file: UploadFile) -> Optional[dict]:
-        """
-        Analiza el CV usando la CvAnalyzerAPI
-        """
-        try:
-            # 🔒 SEGURIDAD: Obtener API key desde .env
-            cv_analyzer_api_key = os.getenv("CV_ANALYZER_API_KEY", "default-secret-key-change-in-production")
-
-            # CORREGIDO: Leer el contenido completo primero
-            cv_file.file.seek(0)  # Asegurar que esté al inicio
-            file_content = cv_file.file.read()  # Leer todo el contenido
-            cv_file.file.seek(0)  # Resetear para uso posterior
-
-            # Preparar el archivo para la API usando el contenido leído
-            files = {
-                'file': (cv_file.filename, file_content, cv_file.content_type)
-            }
-
-            # 🔒 SEGURIDAD: Headers con API key
-            headers = {
-                'X-API-Key': cv_analyzer_api_key
-            }
-
-            # Llamar a CvAnalyzerAPI con autenticación
-            response = requests.post(
-                'http://localhost:8001/analyze/',
-                files=files,
-                headers=headers,
-                timeout=30  # 30 segundos timeout
-            )
-            
-            if response.status_code == 200:
-                result = response.json()
-                return result.get('data', None)
-            else:
-                print(f"Error en CvAnalyzerAPI: {response.status_code} - {response.text}")
-                return None
-                
-        except requests.exceptions.RequestException as e:
-            print(f"Error conectando con CvAnalyzerAPI: {e}")
-            return None
-        except Exception as e:
-            print(f"Error inesperado analizando CV: {e}")
-            return None
+    # DEPRECATED: CV analysis methods removed for simplified academic version
 
     def validate_pdf_fast(self, cv_file: UploadFile) -> bool:
         """
