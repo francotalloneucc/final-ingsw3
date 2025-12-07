@@ -27,21 +27,19 @@ def verify_internal_api_key(x_internal_api_key: Optional[str] = Header(None)):
         )
     return True
 
-# ⭐ ENDPOINT OPTIMIZADO - Registro temporal de candidatos con BackgroundTasks
-@router.post("/register-candidato", response_model=dict)
+# ⭐ ENDPOINT SIMPLIFICADO - Registro directo de candidatos (sin CV ni verificación)
+@router.post("/register-candidato", response_model=UserResponse)
 async def register_candidato(
-    background_tasks: BackgroundTasks,
     email: str = Form(...),
     password: str = Form(...),
     nombre: str = Form(...),
     apellido: str = Form(...),
     genero: GenderEnum = Form(...),
     fecha_nacimiento: date = Form(...),
-    cv_file: UploadFile = File(...),
     profile_picture: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
-    """Registra candidato temporalmente - requiere verificación de email (optimizado)"""
+    """Registra candidato directamente - sin CV ni verificación de email"""
     candidato_create = CandidatoCreate(
         email=email,
         password=password,
@@ -52,12 +50,12 @@ async def register_candidato(
     )
 
     user_service = UserService(db)
-    # Usar el nuevo método optimizado con background tasks
-    result = user_service.create_pending_candidato_fast(candidato_create, cv_file, profile_picture, background_tasks)
-    return result
+    # Crear candidato directamente sin verificación
+    user = user_service.create_candidato_simple(candidato_create, profile_picture)
+    return user
 
-# ⭐ ENDPOINT ACTUALIZADO - Registro temporal de empresas
-@router.post("/register-empresa", response_model=dict)
+# ⭐ ENDPOINT SIMPLIFICADO - Registro directo de empresas (sin verificación)
+@router.post("/register-empresa", response_model=UserResponse)
 async def register_empresa(
     email: str = Form(...),
     password: str = Form(...),
@@ -66,7 +64,7 @@ async def register_empresa(
     profile_picture: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
-    """Registra empresa temporalmente - requiere verificación de email"""
+    """Registra empresa directamente - sin verificación de email"""
     empresa_create = EmpresaCreate(
         email=email,
         password=password,
@@ -75,9 +73,9 @@ async def register_empresa(
     )
 
     user_service = UserService(db)
-    # Usar el nuevo método temporal para empresas
-    result = user_service.create_empresa(empresa_create, profile_picture)
-    return result
+    # Crear empresa directamente sin verificación
+    user = user_service.create_empresa_simple(empresa_create, profile_picture)
+    return user
 
 # 🆕 ENDPOINT PROXY - Analizar CV (para uso del frontend durante registro)
 @router.post("/analyze-cv")

@@ -143,8 +143,8 @@ export class AuthService {
     );
   }
 
-  // Registro de candidatos
-  registerCandidato(userData: CandidatoRequest, cvFile: File, profilePicture?: File): Observable<User> {
+  // Registro de candidatos (simplificado - sin CV)
+  registerCandidato(userData: CandidatoRequest, profilePicture?: File): Observable<User> {
     const formData = new FormData();
     formData.append('email', userData.email);
     formData.append('password', userData.password);
@@ -152,7 +152,6 @@ export class AuthService {
     formData.append('apellido', userData.apellido);
     formData.append('genero', userData.genero);
     formData.append('fecha_nacimiento', userData.fecha_nacimiento);
-    formData.append('cv_file', cvFile);
     if (profilePicture) formData.append('profile_picture', profilePicture);
 
     return this.http.post<User>(`${this.baseUrl}/register-candidato`, formData);
@@ -170,9 +169,9 @@ export class AuthService {
     return this.http.post<User>(`${this.baseUrl}/register-empresa`, formData);
   }
 
-  // Mantener método anterior para compatibilidad
-  register(userData: RegisterRequest, cvFile: File, profilePicture?: File): Observable<User> {
-    return this.registerCandidato(userData, cvFile, profilePicture);
+  // Mantener método anterior para compatibilidad (simplificado)
+  register(userData: RegisterRequest, profilePicture?: File): Observable<User> {
+    return this.registerCandidato(userData, profilePicture);
   }
 
   // 🆕 ACTUALIZADO: Login con estado

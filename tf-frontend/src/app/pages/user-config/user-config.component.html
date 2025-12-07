@@ -153,49 +153,6 @@
           <small class="form-text">Formatos permitidos: JPG, PNG, GIF</small>
         </div>
       </div>
-
-      <!-- CV con validación IA - Ancho completo -->
-      <div class="form-row form-row-full">
-        <label for="cv">Cargar CV (PDF) *</label>
-        <input
-          type="file"
-          id="cv"
-          name="cv"
-          (change)="onFileSelected($event)"
-          accept="application/pdf"
-          [disabled]="cvAnalyzing"
-          required />
-        
-        <!-- Estado de validación del CV -->
-        <div class="cv-validation-status" *ngIf="candidatoData.cv || cvAnalyzing">
-          
-          <!-- Analizando -->
-          <div *ngIf="cvAnalyzing" class="validation-message analyzing">
-            <div class="spinner"></div>
-            Analizando CV...
-          </div>
-          
-          <!-- CV válido -->
-          <div *ngIf="cvValid && !cvAnalyzing" class="validation-message valid">
-            {{ cvValidationMessage }}
-            <button type="button" (click)="removeCv()" class="btn-remove">✕</button>
-          </div>
-          
-          <!-- CV inválido -->
-          <div *ngIf="!cvValid && !cvAnalyzing && cvValidationMessage" class="validation-message invalid">
-            {{ cvValidationMessage }}
-            <button type="button" (click)="removeCv()" class="btn-remove">✕</button>
-          </div>
-          
-        </div>
-        
-        <!-- Información del archivo seleccionado -->
-        <div *ngIf="candidatoData.cv && cvValid" class="file-info">
-          📄 <strong>{{ candidatoData.cv.name }}</strong> ({{ (candidatoData.cv.size / 1024 / 1024).toFixed(2) }} MB)
-        </div>
-
-        <p class="error" *ngIf="cvError">Solo se permite un archivo PDF.</p>
-      </div>
     </div>
 
     <!-- ⭐ SECCIÓN 4: FOTO DE PERFIL PARA EMPRESAS -->
@@ -216,8 +173,7 @@
       type="submit"
       [disabled]="!isFormValid() || loading">
       <span *ngIf="loading">Registrando...</span>
-      <span *ngIf="!loading && userType === 'candidato' && cvAnalyzing">Analizando CV...</span>
-      <span *ngIf="!loading && !cvAnalyzing">Registrarse</span>
+      <span *ngIf="!loading">Registrarse</span>
     </button>
 
     <!-- Mostrar mensaje de error si existe -->

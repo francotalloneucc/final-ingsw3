@@ -1414,7 +1414,128 @@ Equipo Polo52
         """Obtener todos los usuarios candidatos con sus datos completos"""
         # ⭐ CORREGIDO: Import local para evitar problemas de tipo
         from models import User
-        
+
         return self.db.query(User).filter(
             User.role == UserRoleEnum.candidato
         ).offset(skip).limit(limit).all()
+
+    # ⭐ MÉTODOS SIMPLIFICADOS - Registro directo sin verificación (para propósitos académicos)
+
+    def create_candidato_simple(self, candidato_data, profile_picture: Optional[UploadFile] = None):
+        """Crea candidato directamente sin CV ni verificación de email"""
+        from models import User
+        from schemas import CandidatoCreate
+
+        # Verificar si el email ya existe
+        existing_user = self.get_user_by_email(email=candidato_data.email)
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El email ya está registrado"
+            )
+
+        # Guardar foto de perfil si existe
+        profile_pic_filename = None
+        if profile_picture:
+            profile_pic_filename = self.save_profile_picture(profile_picture, candidato_data.email)
+
+        # Crear usuario directamente en la base de datos
+        hashed_password = get_password_hash(candidato_data.password)
+        db_user = User(
+            email=candidato_data.email,
+            hashed_password=hashed_password,
+            role=UserRoleEnum.candidato,
+            nombre=candidato_data.nombre,
+            apellido=candidato_data.apellido,
+            genero=candidato_data.genero,
+            fecha_nacimiento=candidato_data.fecha_nacimiento,
+            profile_picture=profile_pic_filename,
+            verified=True,  # Directamente verificado
+            email_verified=True,  # Email ya verificado
+            # Sin CV
+            cv_filename=None,
+            cv_analizado=None,
+            # Campos NULL para candidatos
+            descripcion=None,
+            verification_code=None,
+            verification_expires=None
+        )
+
+        self.db.add(db_user)
+        self.db.commit()
+        self.db.refresh(db_user)
+
+        return db_user
+
+    def create_empresa_simple(self, empresa_data, profile_picture: Optional[UploadFile] = None):
+        """Crea empresa directamente sin verificación de email"""
+        from models import User
+        from schemas import EmpresaCreate
+
+        # Verificar si el email ya existe
+        existing_user = self.get_user_by_email(email=empresa_data.email)
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El email ya está registrado"
+            )
+
+        # Guardar foto de perfil si existe
+        profile_pic_filename = None
+        if profile_picture:
+            profile_pic_filename = self.save_profile_picture(profile_picture, empresa_data.email)
+
+        # Crear usuario directamente en la base de datos
+        hashed_password = get_password_hash(empresa_data.password)
+        db_user = User(
+            email=empresa_data.email,
+            hashed_password=hashed_password,
+            role=UserRoleEnum.empresa,
+            nombre=empresa_data.nombre,
+            descripcion=empresa_data.descripcion,
+            profile_picture=profile_pic_filename,
+            verified=True,  # Directamente verificado (sin aprobación de admin)
+            email_verified=True,  # Email ya verificado
+            # Campos NULL para empresas
+            apellido=None,
+            genero=None,
+            fecha_nacimiento=None,
+            cv_filename=None,
+            cv_analizado=None,
+            verification_code=None,
+            verification_expires=None
+        )
+
+        self.db.add(db_user)
+        self.db.commit()
+        self.db.refresh(db_user)
+
+        return db_user
+
+    def save_profile_picture(self, picture_file: UploadFile, email: str) -> str:
+        """Guarda foto de perfil permanentemente"""
+        # Crear directorio si no existe
+        os.makedirs("profile_pictures", exist_ok=True)
+
+        # Validar tamaño (máximo 5MB)
+        MAX_PIC_SIZE = 5 * 1024 * 1024
+        picture_file.file.seek(0)
+        content = picture_file.file.read()
+
+        if len(content) > MAX_PIC_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"La foto excede el tamaño máximo de 5MB"
+            )
+
+        # Generar nombre de archivo único
+        file_extension = picture_file.filename.split(".")[-1]
+        safe_email = email.replace("@", "_at_").replace(".", "_dot_")
+        filename = f"profile_{safe_email}_{uuid.uuid4()}.{file_extension}"
+        file_path = os.path.join("profile_pictures", filename)
+
+        # Guardar archivo
+        with open(file_path, "wb") as buffer:
+            buffer.write(content)
+
+        return filename
