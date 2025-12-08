@@ -15,6 +15,9 @@ env:
   REPOSITORY: cloud-run-source-deploy
 
 jobs:
+  # ============================================
+  # FASE 1: Tests en paralelo
+  # ============================================
   test-backend:
     name: Test Backend (Pytest)
     runs-on: ubuntu-latest
@@ -81,6 +84,9 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         continue-on-error: true
 
+  # ============================================
+  # FASE 2: SonarCloud Analysis (necesita coverage)
+  # ============================================
   sonarcloud:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
@@ -153,10 +159,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
+  # ============================================
+  # FASE 3: Builds en paralelo (después de SonarCloud)
+  # ============================================
   build-userapi:
-    needs: [test-backend, sonarcloud]
     name: Build Backend Image
     runs-on: ubuntu-latest
+    needs: [sonarcloud]
     env:
       PROJECT_ID: final-ingsoft3-2025-480515
       REGION: us-central1
@@ -191,44 +200,10 @@ jobs:
       - id: publish
         run: echo "image=${{ steps.vars.outputs.image }}" >> $GITHUB_OUTPUT
 
-  deploy-qa:
-    name: Deploy Backend to QA
-    needs: build-userapi
-    runs-on: ubuntu-latest
-    environment:
-      name: qa
-    steps:
-      - uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - uses: google-github-actions/setup-gcloud@v2
-
-      - name: Clear existing configuration
-        run: |
-          gcloud run services update userapi-qa \
-            --region=us-central1 \
-            --clear-env-vars \
-            --clear-secrets || true
-
-      - uses: google-github-actions/setup-gcloud@v2
-
-      - name: Deploy to QA
-        run: |
-          gcloud run deploy userapi-qa \
-            --image ${{ needs.build-userapi.outputs.image }} \
-            --region us-central1 \
-            --platform managed \
-            --allow-unauthenticated \
-            --set-env-vars "ALGORITHM=HS256,ACCESS_TOKEN_EXPIRE_MINUTES=30" \
-            --set-secrets "DATABASE_URL=DATABASE_URL:latest,SECRET_KEY=SECRET_KEY:latest,EMAIL_USER=EMAIL_USER:latest,EMAIL_PASSWORD=EMAIL_PASSWORD:latest,INTERNAL_SERVICE_API_KEY=INTERNAL_SERVICE_API_KEY:latest" \
-            --add-cloudsql-instances=final-ingsoft3-2025-480515:us-central1:userapi-db \
-            --service-account=userapi-service-account@final-ingsoft3-2025-480515.iam.gserviceaccount.com
-
   build-frontend-qa:
-    needs: test-frontend
     name: Build Frontend Image (QA)
     runs-on: ubuntu-latest
+    needs: [sonarcloud]
     env:
       PROJECT_ID: final-ingsoft3-2025-480515
       REGION: us-central1
@@ -263,9 +238,46 @@ jobs:
       - id: publish
         run: echo "image=${{ steps.vars.outputs.image }}" >> $GITHUB_OUTPUT
 
+  # ============================================
+  # FASE 4: Deploy a QA en paralelo
+  # ============================================
+  deploy-qa:
+    name: Deploy Backend to QA
+    needs: [build-userapi]
+    runs-on: ubuntu-latest
+    environment:
+      name: qa
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Clear existing configuration
+        run: |
+          gcloud run services update userapi-qa \
+            --region=us-central1 \
+            --clear-env-vars \
+            --clear-secrets || true
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to QA
+        run: |
+          gcloud run deploy userapi-qa \
+            --image ${{ needs.build-userapi.outputs.image }} \
+            --region us-central1 \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars "ALGORITHM=HS256,ACCESS_TOKEN_EXPIRE_MINUTES=30" \
+            --set-secrets "DATABASE_URL=DATABASE_URL:latest,SECRET_KEY=SECRET_KEY:latest,EMAIL_USER=EMAIL_USER:latest,EMAIL_PASSWORD=EMAIL_PASSWORD:latest,INTERNAL_SERVICE_API_KEY=INTERNAL_SERVICE_API_KEY:latest" \
+            --add-cloudsql-instances=final-ingsoft3-2025-480515:us-central1:userapi-db \
+            --service-account=userapi-service-account@final-ingsoft3-2025-480515.iam.gserviceaccount.com
+
   deploy-frontend-qa:
     name: Deploy Frontend to QA
-    needs: build-frontend-qa
+    needs: [build-frontend-qa]
     runs-on: ubuntu-latest
     environment:
       name: qa
@@ -284,11 +296,24 @@ jobs:
             --platform managed \
             --allow-unauthenticated
 
+  # ============================================
+  # FASE 5: Cypress Tests (proximamente)
+  # ============================================
+  # cypress-tests:
+  #   name: Cypress Integration Tests
+  #   needs: [deploy-qa, deploy-frontend-qa]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Run Cypress tests
+  #       run: echo "Cypress tests - TO DO"
+
+  # ============================================
+  # FASE 6: Deploy Production + Build Frontend Prod en paralelo
+  # ============================================
   deploy-production:
     name: Deploy Backend to Production
-    needs:
-      - deploy-qa
-      - build-userapi
+    needs: [deploy-qa, deploy-frontend-qa]  # Cambiar a [cypress-tests] cuando esté listo
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -322,7 +347,7 @@ jobs:
 
   build-frontend-prod:
     name: Build Frontend Image (Prod)
-    needs: deploy-production
+    needs: [deploy-qa, deploy-frontend-qa]  # Cambiar a [cypress-tests] cuando esté listo
     runs-on: ubuntu-latest
     env:
       PROJECT_ID: final-ingsoft3-2025-480515
@@ -358,9 +383,12 @@ jobs:
       - id: publish
         run: echo "image=${{ steps.vars.outputs.image }}" >> $GITHUB_OUTPUT
 
+  # ============================================
+  # FASE 7: Deploy Frontend Production
+  # ============================================
   deploy-frontend-prod:
     name: Deploy Frontend to Production
-    needs: build-frontend-prod
+    needs: [build-frontend-prod]
     runs-on: ubuntu-latest
     environment:
       name: production
