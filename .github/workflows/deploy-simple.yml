@@ -1,0 +1,58 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  GCP_PROJECT_ID: final-ingsoft3-2025-480515
+  GCP_REGION: us-central1
+
+jobs:
+  deploy-qa:
+    name: Deploy to QA
+    runs-on: ubuntu-latest
+    environment:
+      name: qa
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+
+      - name: Build and Deploy UserAPI QA
+        run: |
+          cd APIs/UserAPI
+          gcloud builds submit --tag gcr.io/${{ env.GCP_PROJECT_ID }}/userapi:latest
+          gcloud run deploy userapi-qa --image gcr.io/${{ env.GCP_PROJECT_ID }}/userapi:latest --region ${{ env.GCP_REGION }} --platform managed --allow-unauthenticated --add-cloudsql-instances ${{ env.GCP_PROJECT_ID }}:${{ env.GCP_REGION }}:userapi-db --set-secrets DATABASE_URL=DATABASE_URL:latest,SECRET_KEY=SECRET_KEY:latest,EMAIL_USER=EMAIL_USER:latest,EMAIL_PASSWORD=EMAIL_PASSWORD:latest,INTERNAL_SERVICE_API_KEY=INTERNAL_SERVICE_API_KEY:latest,ACCESS_TOKEN_EXPIRE_MINUTES=ACCESS_TOKEN_EXPIRE_MINUTES:latest,ALGORITHM=ALGORITHM:latest --service-account userapi-service-account@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: deploy-qa
+    environment:
+      name: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+
+      - name: Deploy UserAPI Production
+        run: |
+          gcloud run deploy userapi --image gcr.io/${{ env.GCP_PROJECT_ID }}/userapi:latest --region ${{ env.GCP_REGION }} --platform managed --allow-unauthenticated --add-cloudsql-instances ${{ env.GCP_PROJECT_ID }}:${{ env.GCP_REGION }}:userapi-db --set-secrets DATABASE_URL=DATABASE_URL:latest,SECRET_KEY=SECRET_KEY:latest,EMAIL_USER=EMAIL_USER:latest,EMAIL_PASSWORD=EMAIL_PASSWORD:latest,INTERNAL_SERVICE_API_KEY=INTERNAL_SERVICE_API_KEY:latest,ACCESS_TOKEN_EXPIRE_MINUTES=ACCESS_TOKEN_EXPIRE_MINUTES:latest,ALGORITHM=ALGORITHM:latest --service-account userapi-service-account@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com
