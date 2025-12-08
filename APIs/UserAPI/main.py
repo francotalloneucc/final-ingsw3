@@ -45,6 +45,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:4200",  # Desarrollo local
+        "https://frontend-qa-737714447258.us-central1.run.app",  # QA
         "https://frontend-737714447258.us-central1.run.app"  # Producción
     ],
     allow_credentials=True,

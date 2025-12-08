@@ -1,0 +1,274 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  GCP_PROJECT_ID: final-ingsoft3-2025-480515
+  GCP_REGION: us-central1
+  GCP_SERVICE_ACCOUNT: userapi-service-account@final-ingsoft3-2025-480515.iam.gserviceaccount.com
+  CLOUDSQL_INSTANCE: final-ingsoft3-2025-480515:us-central1:userapi-db
+
+jobs:
+  # ========================================
+  # BUILD JOBS
+  # ========================================
+
+  build-userapi:
+    name: Build UserAPI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker
+
+      - name: Build UserAPI Docker image
+        run: |
+          docker build -t gcr.io/${{ env.GCP_PROJECT_ID }}/userapi:${{ github.sha }} \
+                       -t gcr.io/${{ env.GCP_PROJECT_ID }}/userapi:latest \
+                       ./APIs/UserAPI
+
+      - name: Push UserAPI image to GCR
+        run: |
+          docker push gcr.io/${{ env.GCP_PROJECT_ID }}/userapi:${{ github.sha }}
+          docker push gcr.io/${{ env.GCP_PROJECT_ID }}/userapi:latest
+
+  build-frontend-qa:
+    name: Build Frontend QA
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker
+
+      - name: Build Frontend QA Docker image
+        run: |
+          docker build --build-arg BUILD_ENV=qa \
+                       -t gcr.io/${{ env.GCP_PROJECT_ID }}/frontend-qa:${{ github.sha }} \
+                       -t gcr.io/${{ env.GCP_PROJECT_ID }}/frontend-qa:latest \
+                       ./tf-frontend
+
+      - name: Push Frontend QA image to GCR
+        run: |
+          docker push gcr.io/${{ env.GCP_PROJECT_ID }}/frontend-qa:${{ github.sha }}
+          docker push gcr.io/${{ env.GCP_PROJECT_ID }}/frontend-qa:latest
+
+  build-frontend-prod:
+    name: Build Frontend Production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker
+
+      - name: Build Frontend Production Docker image
+        run: |
+          docker build --build-arg BUILD_ENV=production \
+                       -t gcr.io/${{ env.GCP_PROJECT_ID }}/frontend:${{ github.sha }} \
+                       -t gcr.io/${{ env.GCP_PROJECT_ID }}/frontend:latest \
+                       ./tf-frontend
+
+      - name: Push Frontend Production image to GCR
+        run: |
+          docker push gcr.io/${{ env.GCP_PROJECT_ID }}/frontend:${{ github.sha }}
+          docker push gcr.io/${{ env.GCP_PROJECT_ID }}/frontend:latest
+
+  # ========================================
+  # DEPLOY TO QA
+  # ========================================
+
+  deploy-qa-userapi:
+    name: Deploy UserAPI to QA
+    runs-on: ubuntu-latest
+    needs: build-userapi
+    environment:
+      name: qa
+      url: https://userapi-qa-737714447258.us-central1.run.app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Deploy UserAPI to QA
+        run: |
+          gcloud run deploy userapi-qa \
+            --image gcr.io/${{ env.GCP_PROJECT_ID }}/userapi:${{ github.sha }} \
+            --region ${{ env.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars "API_PORT=8000" \
+            --add-cloudsql-instances ${{ env.CLOUDSQL_INSTANCE }} \
+            --set-secrets "DATABASE_URL=DATABASE_URL:latest,SECRET_KEY=SECRET_KEY:latest,EMAIL_USER=EMAIL_USER:latest,EMAIL_PASSWORD=EMAIL_PASSWORD:latest,INTERNAL_SERVICE_API_KEY=INTERNAL_SERVICE_API_KEY:latest" \
+            --service-account ${{ env.GCP_SERVICE_ACCOUNT }}
+
+      - name: Get QA UserAPI URL
+        id: qa-url
+        run: |
+          URL=$(gcloud run services describe userapi-qa --region ${{ env.GCP_REGION }} --format 'value(status.url)')
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "✅ UserAPI QA deployed to: $URL"
+
+      - name: Health Check QA UserAPI
+        run: |
+          sleep 10
+          curl -f ${{ steps.qa-url.outputs.url }}/health || exit 1
+
+  deploy-qa-frontend:
+    name: Deploy Frontend to QA
+    runs-on: ubuntu-latest
+    needs: [build-frontend-qa, deploy-qa-userapi]
+    environment:
+      name: qa
+      url: https://frontend-qa-737714447258.us-central1.run.app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Deploy Frontend to QA
+        run: |
+          gcloud run deploy frontend-qa \
+            --image gcr.io/${{ env.GCP_PROJECT_ID }}/frontend-qa:${{ github.sha }} \
+            --region ${{ env.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated
+
+      - name: Get QA Frontend URL
+        id: qa-url
+        run: |
+          URL=$(gcloud run services describe frontend-qa --region ${{ env.GCP_REGION }} --format 'value(status.url)')
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "✅ Frontend QA deployed to: $URL"
+
+      - name: Health Check QA Frontend
+        run: |
+          sleep 10
+          curl -f ${{ steps.qa-url.outputs.url }} || exit 1
+
+  # ========================================
+  # DEPLOY TO PRODUCTION (Manual Approval)
+  # ========================================
+
+  deploy-prod-userapi:
+    name: Deploy UserAPI to Production
+    runs-on: ubuntu-latest
+    needs: [deploy-qa-userapi, deploy-qa-frontend]
+    environment:
+      name: production
+      url: https://userapi-737714447258.us-central1.run.app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Deploy UserAPI to Production
+        run: |
+          gcloud run deploy userapi \
+            --image gcr.io/${{ env.GCP_PROJECT_ID }}/userapi:${{ github.sha }} \
+            --region ${{ env.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars "API_PORT=8000" \
+            --add-cloudsql-instances ${{ env.CLOUDSQL_INSTANCE }} \
+            --set-secrets "DATABASE_URL=DATABASE_URL:latest,SECRET_KEY=SECRET_KEY:latest,EMAIL_USER=EMAIL_USER:latest,EMAIL_PASSWORD=EMAIL_PASSWORD:latest,INTERNAL_SERVICE_API_KEY=INTERNAL_SERVICE_API_KEY:latest" \
+            --service-account ${{ env.GCP_SERVICE_ACCOUNT }}
+
+      - name: Get Production UserAPI URL
+        id: prod-url
+        run: |
+          URL=$(gcloud run services describe userapi --region ${{ env.GCP_REGION }} --format 'value(status.url)')
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "✅ UserAPI Production deployed to: $URL"
+
+      - name: Health Check Production UserAPI
+        run: |
+          sleep 10
+          curl -f ${{ steps.prod-url.outputs.url }}/health || exit 1
+
+  deploy-prod-frontend:
+    name: Deploy Frontend to Production
+    runs-on: ubuntu-latest
+    needs: [build-frontend-prod, deploy-prod-userapi]
+    environment:
+      name: production
+      url: https://frontend-737714447258.us-central1.run.app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Deploy Frontend to Production
+        run: |
+          gcloud run deploy frontend \
+            --image gcr.io/${{ env.GCP_PROJECT_ID }}/frontend:${{ github.sha }} \
+            --region ${{ env.GCP_REGION }} \
+            --platform managed \
+            --allow-unauthenticated
+
+      - name: Get Production Frontend URL
+        id: prod-url
+        run: |
+          URL=$(gcloud run services describe frontend --region ${{ env.GCP_REGION }} --format 'value(status.url)')
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "✅ Frontend Production deployed to: $URL"
+
+      - name: Health Check Production Frontend
+        run: |
+          sleep 10
+          curl -f ${{ steps.prod-url.outputs.url }} || exit 1

@@ -3,6 +3,9 @@
 # Stage 1: Build
 FROM node:20-alpine AS build
 
+# Argumento para el entorno de build (qa o production)
+ARG BUILD_ENV=production
+
 WORKDIR /app
 
 # Copiar package files
@@ -14,8 +17,12 @@ RUN npm ci
 # Copiar código fuente
 COPY . .
 
-# Build de producción
-RUN npm run build
+# Build según el entorno especificado
+RUN if [ "$BUILD_ENV" = "qa" ]; then \
+      npm run build -- --configuration=qa; \
+    else \
+      npm run build -- --configuration=production; \
+    fi
 
 # Stage 2: Serve con nginx
 FROM nginx:alpine

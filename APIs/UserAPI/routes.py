@@ -18,6 +18,16 @@ security = HTTPBearer()
 # 🔒 SEGURIDAD: API Key para comunicación interna entre servicios
 INTERNAL_API_KEY = os.getenv("INTERNAL_SERVICE_API_KEY", "internal-service-key-change-in-production")
 
+# ✅ HEALTH CHECK ENDPOINT
+@router.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring and CI/CD pipelines"""
+    return {
+        "status": "healthy",
+        "service": "UserAPI",
+        "version": "1.0.0"
+    }
+
 def verify_internal_api_key(x_internal_api_key: Optional[str] = Header(None)):
     """Verifica que la API key interna sea válida para comunicación entre servicios"""
     if x_internal_api_key is None or x_internal_api_key != INTERNAL_API_KEY:
