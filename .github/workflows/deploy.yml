@@ -86,6 +86,64 @@ jobs:
             --add-cloudsql-instances=final-ingsoft3-2025-480515:us-central1:userapi-db \
             --service-account=userapi-service-account@final-ingsoft3-2025-480515.iam.gserviceaccount.com
 
+  build-frontend-qa:
+    name: Build Frontend Image (QA)
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_ID: final-ingsoft3-2025-480515
+      REGION: us-central1
+      REGISTRY_HOST: us-central1-docker.pkg.dev
+    outputs:
+      image: ${{ steps.publish.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: final-ingsoft3-2025-480515
+
+      - name: Configure Docker auth
+        run: gcloud auth configure-docker $REGISTRY_HOST
+
+      - id: vars
+        run: |
+          IMAGE="${REGISTRY_HOST}/${PROJECT_ID}/${REPOSITORY}/frontend-qa:${GITHUB_SHA}"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Build frontend QA image
+        run: docker build --build-arg BUILD_ENV=qa -t ${{ steps.vars.outputs.image }} ./tf-frontend
+
+      - name: Push frontend QA image
+        run: docker push ${{ steps.vars.outputs.image }}
+
+      - id: publish
+        run: echo "image=${{ steps.vars.outputs.image }}" >> $GITHUB_OUTPUT
+
+  deploy-frontend-qa:
+    name: Deploy Frontend to QA
+    needs: build-frontend-qa
+    runs-on: ubuntu-latest
+    environment:
+      name: qa
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy Frontend to QA
+        run: |
+          gcloud run deploy frontend-qa \
+            --image ${{ needs.build-frontend-qa.outputs.image }} \
+            --region us-central1 \
+            --platform managed \
+            --allow-unauthenticated
+
   deploy-production:
     name: Deploy Backend to Production
     needs:
@@ -121,3 +179,62 @@ jobs:
             --set-secrets "DATABASE_URL=DATABASE_URL:latest,SECRET_KEY=SECRET_KEY:latest,EMAIL_USER=EMAIL_USER:latest,EMAIL_PASSWORD=EMAIL_PASSWORD:latest,INTERNAL_SERVICE_API_KEY=INTERNAL_SERVICE_API_KEY:latest" \
             --add-cloudsql-instances=final-ingsoft3-2025-480515:us-central1:userapi-db \
             --service-account=userapi-service-account@final-ingsoft3-2025-480515.iam.gserviceaccount.com
+
+  build-frontend-prod:
+    name: Build Frontend Image (Prod)
+    needs: deploy-production
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_ID: final-ingsoft3-2025-480515
+      REGION: us-central1
+      REGISTRY_HOST: us-central1-docker.pkg.dev
+    outputs:
+      image: ${{ steps.publish.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: final-ingsoft3-2025-480515
+
+      - name: Configure Docker auth
+        run: gcloud auth configure-docker $REGISTRY_HOST
+
+      - id: vars
+        run: |
+          IMAGE="${REGISTRY_HOST}/${PROJECT_ID}/${REPOSITORY}/frontend-prod:${GITHUB_SHA}"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Build frontend production image
+        run: docker build --build-arg BUILD_ENV=production -t ${{ steps.vars.outputs.image }} ./tf-frontend
+
+      - name: Push frontend production image
+        run: docker push ${{ steps.vars.outputs.image }}
+
+      - id: publish
+        run: echo "image=${{ steps.vars.outputs.image }}" >> $GITHUB_OUTPUT
+
+  deploy-frontend-prod:
+    name: Deploy Frontend to Production
+    needs: build-frontend-prod
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy Frontend to Production
+        run: |
+          gcloud run deploy frontend \
+            --image ${{ needs.build-frontend-prod.outputs.image }} \
+            --region us-central1 \
+            --platform managed \
+            --allow-unauthenticated
