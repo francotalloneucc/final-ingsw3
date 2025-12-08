@@ -31,7 +31,7 @@ jobs:
       - name: Build and Deploy UserAPI QA
         run: |
           cd APIs/UserAPI
-          gcloud builds submit --tag gcr.io/${{ env.GCP_PROJECT_ID }}/userapi:latest
+          gcloud builds submit --tag gcr.io/${{ env.GCP_PROJECT_ID }}/userapi:latest --gcs-log-dir=gs://${{ env.GCP_PROJECT_ID }}_cloudbuild/logs
           gcloud run deploy userapi-qa --image gcr.io/${{ env.GCP_PROJECT_ID }}/userapi:latest --region ${{ env.GCP_REGION }} --platform managed --allow-unauthenticated --add-cloudsql-instances ${{ env.GCP_PROJECT_ID }}:${{ env.GCP_REGION }}:userapi-db --set-secrets DATABASE_URL=DATABASE_URL:latest,SECRET_KEY=SECRET_KEY:latest,EMAIL_USER=EMAIL_USER:latest,EMAIL_PASSWORD=EMAIL_PASSWORD:latest,INTERNAL_SERVICE_API_KEY=INTERNAL_SERVICE_API_KEY:latest,ACCESS_TOKEN_EXPIRE_MINUTES=ACCESS_TOKEN_EXPIRE_MINUTES:latest,ALGORITHM=ALGORITHM:latest --service-account userapi-service-account@${{ env.GCP_PROJECT_ID }}.iam.gserviceaccount.com
 
   deploy-production:

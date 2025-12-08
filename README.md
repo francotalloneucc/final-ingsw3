@@ -688,4 +688,4 @@ Este proyecto fue desarrollado como trabajo práctico para la materia **Ingenier
 *Última actualización: 2025-12-07*
 *CI/CD Pipeline: GitHub Actions*
 *Deployment: Google Cloud Run*
-*Status: Configurado*
+*Status: En Testing*
