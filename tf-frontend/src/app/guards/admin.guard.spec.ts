@@ -49,7 +49,7 @@ describe('adminGuard', () => {
 
     // Check if result is an Observable
     if (result instanceof Observable) {
-      result.subscribe((allowed: boolean) => {
+      result.subscribe(allowed => {
         expect(allowed).toBe(true);
         done();
       });
@@ -71,7 +71,7 @@ describe('adminGuard', () => {
 
     // Check if result is an Observable
     if (result instanceof Observable) {
-      result.subscribe((allowed: boolean) => {
+      result.subscribe(allowed => {
         expect(allowed).toBe(false);
         expect(router.navigate).toHaveBeenCalledWith(['/inicio']);
         done();

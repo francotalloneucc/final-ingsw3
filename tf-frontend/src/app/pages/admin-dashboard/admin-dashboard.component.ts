@@ -183,9 +183,9 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   // Gestión de empresas
-  verifyCompany(companyId: number): void {
+  verifyCompany(companyEmail: string): void {
     if (confirm('¿Verificar esta empresa?')) {
-      this.authService.verifyCompany(companyId).subscribe({
+      this.authService.verifyCompany(companyEmail).subscribe({
         next: () => {
           alert('Empresa verificada exitosamente');
           this.loadDashboardData();
@@ -193,21 +193,6 @@ export class AdminDashboardComponent implements OnInit {
         error: (error: any) => {
           console.error('Error verificando empresa:', error);
           alert('Error al verificar la empresa');
-        }
-      });
-    }
-  }
-
-  deleteUser(userId: number): void {
-    if (confirm('¿Estás seguro de eliminar este usuario?')) {
-      this.authService.deleteUser(userId).subscribe({
-        next: () => {
-          alert('Usuario eliminado exitosamente');
-          this.loadDashboardData();
-        },
-        error: (error: any) => {
-          console.error('Error eliminando usuario:', error);
-          alert('Error al eliminar el usuario');
         }
       });
     }
