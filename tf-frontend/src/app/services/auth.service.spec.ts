@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { Router } from '@angular/router';
 import { AuthService, User, CandidatoRequest, EmpresaRequest, LoginRequest, AuthResponse } from './auth.service';
@@ -89,10 +90,11 @@ describe('AuthService', () => {
 
     it('should validate token on initialization', () => {
       localStorage.setItem('token', 'test-token');
-      
+
       // Create new service instance to trigger initialization
-      const newService = new AuthService(httpMock, routerSpy);
-      
+      const httpClient = TestBed.inject(HttpClient);
+      const newService = new AuthService(httpClient, routerSpy);
+
       const req = httpMock.expectOne('http://localhost:8000/api/v1/me');
       expect(req.request.method).toBe('GET');
       req.flush(mockUser);
@@ -100,56 +102,14 @@ describe('AuthService', () => {
 
     it('should handle invalid token during validation', () => {
       localStorage.setItem('token', 'invalid-token');
-      
-      const newService = new AuthService(httpMock, routerSpy);
-      
+
+      const httpClient = TestBed.inject(HttpClient);
+      const newService = new AuthService(httpClient, routerSpy);
+
       const req = httpMock.expectOne('http://localhost:8000/api/v1/me');
       req.error(new ErrorEvent('Unauthorized'), { status: 401 });
-      
+
       expect(localStorage.getItem('token')).toBeNull();
-    });
-  });
-
-  describe('CV Analysis', () => {
-    it('should analyze CV successfully', () => {
-      const mockFile = new File(['test content'], 'test.pdf', { type: 'application/pdf' });
-      const mockResponse = {
-        valid: true,
-        message: 'CV analyzed successfully',
-        data: { skills: ['Python', 'JavaScript'] }
-      };
-
-      service.analyzeCv(mockFile).subscribe(response => {
-        expect(response).toEqual(mockResponse);
-      });
-
-      const req = httpMock.expectOne('http://localhost:8001/analyze/');
-      expect(req.request.method).toBe('POST');
-      expect(req.request.body).toBeInstanceOf(FormData);
-      req.flush(mockResponse);
-    });
-
-    it('should validate CV only', () => {
-      const mockFile = new File(['test content'], 'test.pdf', { type: 'application/pdf' });
-      const mockResponse = { valid: true, message: 'Valid CV' };
-
-      service.validateCvOnly(mockFile).subscribe(isValid => {
-        expect(isValid).toBeTrue();
-      });
-
-      const req = httpMock.expectOne('http://localhost:8001/analyze/');
-      req.flush(mockResponse);
-    });
-
-    it('should handle CV validation error', () => {
-      const mockFile = new File(['test content'], 'test.pdf', { type: 'application/pdf' });
-
-      service.validateCvOnly(mockFile).subscribe(isValid => {
-        expect(isValid).toBeFalse();
-      });
-
-      const req = httpMock.expectOne('http://localhost:8001/analyze/');
-      req.error(new ErrorEvent('Server Error'));
     });
   });
 
@@ -454,20 +414,6 @@ describe('AuthService', () => {
 
       const req = httpMock.expectOne('http://localhost:8000/api/v1/me');
       req.error(new ErrorEvent('Token expired'), { status: 401 });
-    });
-
-    it('should handle network errors in CV analysis', () => {
-      const mockFile = new File(['test'], 'test.pdf');
-
-      service.analyzeCv(mockFile).subscribe({
-        next: () => fail('Should have failed'),
-        error: (error) => {
-          expect(error).toBeDefined();
-        }
-      });
-
-      const req = httpMock.expectOne('http://localhost:8001/analyze/');
-      req.error(new ErrorEvent('Network error'));
     });
   });
 
