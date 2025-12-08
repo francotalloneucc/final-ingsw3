@@ -683,3 +683,6 @@ Este proyecto fue desarrollado como trabajo práctico para la materia **Ingenier
 ---
 
 **¿Preguntas?** Abrir un issue en GitHub o contactar al autor.
+
+---
+*Última actualización: 2025-12-07*
