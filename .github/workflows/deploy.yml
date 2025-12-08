@@ -324,8 +324,7 @@ jobs:
         with:
           working-directory: tf-frontend
           browser: chrome
-          headless: true
-          config: baseUrl=https://frontend-qa-lw3dvwdunq-uc.a.run.app
+          config: baseUrl=https://frontend-qa-737714447258.us-central1.run.app
         env:
           CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
         continue-on-error: false
@@ -443,4 +442,5 @@ jobs:
             --image ${{ needs.build-frontend-prod.outputs.image }} \
             --region us-central1 \
             --platform managed \
-            --allow-unauthenticated
+            --allow-unauthenticated \
+            --port=8080
