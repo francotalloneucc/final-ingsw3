@@ -34,7 +34,7 @@ jobs:
       - name: Run tests with coverage
         run: |
           cd APIs/UserAPI
-          DATABASE_URL="sqlite:///test.db" python -m pytest tests/test_simplified_api.py -v --cov=. --cov-report=term-missing --cov-report=xml
+          DATABASE_URL="sqlite:///test.db" python -m pytest tests/test_simplified_api.py tests/test_additional_coverage.py -v --cov=. --cov-report=term-missing --cov-report=xml
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4

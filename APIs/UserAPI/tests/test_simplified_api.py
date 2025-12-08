@@ -402,39 +402,6 @@ class TestProtectedEndpoints:
 # ===================================
 # TESTS DE OBSOLETE ENDPOINT
 # ===================================
-
-class TestObsoleteEndpoints:
-    """Tests para endpoints deprecados"""
-
-    def test_obsolete_register_endpoint_returns_410(self, client):
-        """
-        GIVEN el endpoint /api/v1/register (obsoleto)
-        WHEN se intenta usar con datos completos
-        THEN retorna 410 Gone
-        """
-        # Arrange: Crear archivo fake para cv_file
-        import io
-        fake_cv = io.BytesIO(b"fake pdf content")
-
-        # Act: Intentar usar endpoint obsoleto con todos los campos requeridos
-        response = client.post("/api/v1/register",
-            data={
-                "email": "test@test.com",
-                "password": "Pass123!",
-                "nombre": "Test",
-                "apellido": "User",
-                "genero": "masculino",
-                "fecha_nacimiento": "1990-01-01"
-            },
-            files={"cv_file": ("cv.pdf", fake_cv, "application/pdf")}
-        )
-
-        # Assert
-        assert response.status_code == 410
-        assert "deshabilitado" in response.json()["detail"]
-
-
-# ===================================
 # TESTS DE VALIDACIÓN Y EDGE CASES
 # ===================================
 
