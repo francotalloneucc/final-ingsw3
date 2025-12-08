@@ -294,7 +294,8 @@ jobs:
             --image ${{ needs.build-frontend-qa.outputs.image }} \
             --region us-central1 \
             --platform managed \
-            --allow-unauthenticated
+            --allow-unauthenticated \
+            --port=8080
 
   # ============================================
   # FASE 5: Cypress Tests
