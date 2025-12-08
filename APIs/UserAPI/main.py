@@ -21,24 +21,12 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# ⭐ EVENTO DE STARTUP - Limpiar archivos temporales expirados al iniciar
+# ⭐ EVENTO DE STARTUP - Simplificado para versión de deployment
 @app.on_event("startup")
 async def startup_event():
     """Ejecutar tareas al iniciar la aplicación"""
-    from services import TemporaryStorage
     print("🚀 Iniciando UserAPI...")
-    print("🧹 Limpiando archivos temporales expirados y huérfanos...")
-    temp_storage = TemporaryStorage()
-
-    # Limpiar registros expirados
-    expired_count = temp_storage.cleanup_expired_registrations()
-    print(f"✅ {expired_count} registros expirados eliminados")
-
-    # Limpiar archivos huérfanos
-    orphaned_count = temp_storage.cleanup_orphaned_temp_files()
-    print(f"✅ {orphaned_count} archivos huérfanos eliminados")
-
-    print(f"✅ Limpieza inicial completada")
+    print("✅ UserAPI iniciada correctamente")
 
 # Configurar CORS
 app.add_middleware(
