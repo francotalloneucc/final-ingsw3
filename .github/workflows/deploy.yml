@@ -65,9 +65,11 @@ jobs:
           npm ci
 
       - name: Run tests with coverage
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
         run: |
           cd tf-frontend
-          npm test -- --watch=false --code-coverage --browsers=ChromeHeadlessCI
+          npm test -- --watch=false --code-coverage --browsers=ChromeHeadlessNoSandbox
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
