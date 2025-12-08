@@ -7,15 +7,15 @@ import { FeaturesComponent } from './components/features/features.component';
 import { TestimonialsComponent } from './components/testimonials/testimonials.component';
 import { FooterComponent } from './components/footer/footer.component';
 import { LoginComponent } from './components/login/login.component';
-import { ReactiveFormsModule } from '@angular/forms'; // 👈 NECESARIO
-import { UserConfigComponent } from './pages/user-config/user-config.component';
+import { ReactiveFormsModule } from '@angular/forms';
 import { MyUserComponent } from './pages/my-user/my-user.component';
+
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [
     RouterOutlet,
-    ReactiveFormsModule,       
+    ReactiveFormsModule,
     HeaderComponent,
     HeroComponent,
     PartnersComponent,
@@ -23,7 +23,6 @@ import { MyUserComponent } from './pages/my-user/my-user.component';
     TestimonialsComponent,
     FooterComponent,
     LoginComponent,
-    UserConfigComponent,
     MyUserComponent,
   ],
   templateUrl: './app.component.html',

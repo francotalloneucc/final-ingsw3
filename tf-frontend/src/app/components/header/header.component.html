@@ -22,7 +22,7 @@
     <!-- Menú dinámico -->
     <div class="collapse navbar-collapse justify-content-end" id="navbarContent">
       <ul class="navbar-nav align-items-center custom-nav">
-        
+
         <!-- 🏠 LANDING PAGE (no logueado) -->
         <ng-container *ngIf="isLandingPage && !isLoggedIn">
           <li class="nav-item">
@@ -36,11 +36,16 @@
           </li>
         </ng-container>
 
-        <!-- 🏠 LANDING (logueado) - caso especial -->
+        <!-- 🏠 LANDING (logueado) -->
         <ng-container *ngIf="isLandingPage && isLoggedIn">
           <li class="nav-item">
-            <button class="btn btn-outline-secondary me-2" (click)="onHome()">
-              Ir a Plataforma
+            <button class="btn btn-outline-secondary me-2" (click)="onProfile()">
+              Mi Perfil
+            </button>
+          </li>
+          <li class="nav-item" *ngIf="isAdmin">
+            <button class="btn btn-outline-secondary me-2" (click)="onAdminDashboard()">
+              Panel Admin
             </button>
           </li>
           <li class="nav-item">
@@ -62,45 +67,24 @@
           </li>
         </ng-container>
 
-        <!-- 🔐 TODAS LAS PÁGINAS LOGUEADAS (excepto landing) -->
+        <!-- 🔐 PÁGINAS LOGUEADAS (mi-perfil, admin-dashboard) -->
         <ng-container *ngIf="!isLandingPage && isLoggedIn">
-          <!-- Inicio - solo si NO estamos en /inicio -->
-          <li class="nav-item" *ngIf="!isInicioPage">
-            <button class="btn btn-link nav-link fw-semibold custom-link" (click)="onHome()">
-              Inicio
-            </button>
-          </li>
-          
-          <!-- Mi Perfil - solo si NO estamos en /my-user -->
+          <!-- Mi Perfil - solo si NO estamos en mi-perfil -->
           <li class="nav-item" *ngIf="!isMyUserPage">
             <button class="btn btn-link nav-link fw-semibold custom-link" (click)="onProfile()">
               Mi Perfil
             </button>
           </li>
-          
-          <!-- Panel Admin - solo para administradores y NO estamos en admin-dashboard -->
+
+          <!-- Panel Admin - solo para administradores -->
           <li class="nav-item" *ngIf="isAdmin && !isAdminDashboardPage">
             <button class="btn btn-link nav-link fw-semibold custom-link" (click)="onAdminDashboard()">
               <i class="bi bi-speedometer2"></i>
               Panel Admin
             </button>
           </li>
-          
-          <!-- Mis Postulaciones - solo para NO admins y NO estamos en /mis-postulaciones -->
-          <li class="nav-item" *ngIf="!isMyApplicationsPage && !isAdmin">
-            <button class="btn btn-link nav-link fw-semibold custom-link" (click)="onApplications()">
-              Mis Postulaciones
-            </button>
-          </li>
-          
-          <!-- Administrador de Ofertas - solo si puede gestionar ofertas (empresa O recruiter) y NO es admin -->
-          <li class="nav-item" *ngIf="canManageJobs && !isJobOpeningAdminPage && !isAdmin">
-            <button class="btn btn-link nav-link fw-semibold custom-link" (click)="onJobAdmin()">
-              Administrador de Ofertas
-            </button>
-          </li>
-          
-          <!-- Cerrar Sesión - siempre visible cuando está logueado -->
+
+          <!-- Cerrar Sesión -->
           <li class="nav-item">
             <button class="btn custom-btn px-4 py-2" (click)="onLogout()">
               Cerrar Sesión
