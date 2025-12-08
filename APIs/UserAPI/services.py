@@ -249,8 +249,8 @@ class UserService:
             if field != "password" and hasattr(user, field) and value is not None:
                 setattr(user, field, value)
 
-        # Actualizar contraseña si se proporciona
-        if user_update.password:
+        # Actualizar contraseña si se proporciona (solo si el campo existe en el schema)
+        if hasattr(user_update, 'password') and user_update.password:
             password_bytes = user_update.password.encode('utf-8')[:72]
             password_truncated = password_bytes.decode('utf-8', errors='ignore')
             user.hashed_password = get_password_hash(password_truncated)
