@@ -1,0 +1,112 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  PROJECT_ID: final-ingsoft3-2025-480515
+  REGION: us-central1
+  REGISTRY_HOST: us-central1-docker.pkg.dev
+
+jobs:
+  build-userapi:
+    name: Build Backend Image
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.publish.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker auth
+        run: gcloud auth configure-docker ${{ env.REGISTRY_HOST }}
+
+      - id: vars
+        run: |
+          IMAGE="${{ env.REGISTRY_HOST }}/${{ env.PROJECT_ID }}/cloud-run-source-deploy/userapi:${{ github.sha }}"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Build backend image
+        run: docker build -t ${{ steps.vars.outputs.image }} ./APIs/UserAPI
+
+      - name: Push backend image
+        run: docker push ${{ steps.vars.outputs.image }}
+
+      - id: publish
+        run: echo "image=${{ steps.vars.outputs.image }}" >> $GITHUB_OUTPUT
+
+  deploy-qa:
+    name: Deploy to QA
+    needs: build-userapi
+    runs-on: ubuntu-latest
+    environment:
+      name: qa
+
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: userapi-qa
+          image: ${{ needs.build-userapi.outputs.image }}
+          region: ${{ env.REGION }}
+          env_vars: |
+            API_PORT=8080
+          secrets: |
+            DATABASE_URL=DATABASE_URL:latest
+            SECRET_KEY=SECRET_KEY:latest
+            EMAIL_USER=EMAIL_USER:latest
+            EMAIL_PASSWORD=EMAIL_PASSWORD:latest
+            INTERNAL_SERVICE_API_KEY=INTERNAL_SERVICE_API_KEY:latest
+            ACCESS_TOKEN_EXPIRE_MINUTES=ACCESS_TOKEN_EXPIRE_MINUTES:latest
+            ALGORITHM=ALGORITHM:latest
+          flags: |
+            --allow-unauthenticated
+            --add-cloudsql-instances=${{ env.PROJECT_ID }}:${{ env.REGION }}:userapi-db
+            --service-account=userapi-service-account@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
+
+  deploy-production:
+    name: Deploy to Production
+    needs: deploy-qa
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: userapi
+          image: ${{ needs.build-userapi.outputs.image }}
+          region: ${{ env.REGION }}
+          env_vars: |
+            API_PORT=8080
+          secrets: |
+            DATABASE_URL=DATABASE_URL:latest
+            SECRET_KEY=SECRET_KEY:latest
+            EMAIL_USER=EMAIL_USER:latest
+            EMAIL_PASSWORD=EMAIL_PASSWORD:latest
+            INTERNAL_SERVICE_API_KEY=INTERNAL_SERVICE_API_KEY:latest
+            ACCESS_TOKEN_EXPIRE_MINUTES=ACCESS_TOKEN_EXPIRE_MINUTES:latest
+            ALGORITHM=ALGORITHM:latest
+          flags: |
+            --allow-unauthenticated
+            --add-cloudsql-instances=${{ env.PROJECT_ID }}:${{ env.REGION }}:userapi-db
+            --service-account=userapi-service-account@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
