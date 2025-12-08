@@ -312,7 +312,7 @@ class UserService:
 
     def _save_profile_picture(self, picture_file: UploadFile, email: str) -> str:
         """
-        Guarda una foto de perfil en el sistema de archivos
+        Guarda una foto de perfil en el sistema de archivos (seguro contra path injection)
 
         Args:
             picture_file: Archivo de imagen
@@ -321,13 +321,40 @@ class UserService:
         Returns:
             Nombre del archivo guardado
         """
-        # Crear directorio si no existe
-        os.makedirs("profile_pictures", exist_ok=True)
+        import re
 
-        # Generar nombre único
-        extension = picture_file.filename.split(".")[-1]
-        filename = f"{email.replace('@', '_')}_{uuid.uuid4().hex[:8]}.{extension}"
-        filepath = os.path.join("profile_pictures", filename)
+        # Crear directorio si no existe
+        base_dir = "profile_pictures"
+        os.makedirs(base_dir, exist_ok=True)
+
+        # Whitelist de extensiones permitidas (seguridad)
+        ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
+
+        # Sanitizar extensión del archivo
+        if picture_file.filename and '.' in picture_file.filename:
+            extension = picture_file.filename.rsplit('.', 1)[1].lower()
+            # Validar extensión contra whitelist
+            if extension not in ALLOWED_EXTENSIONS:
+                extension = 'jpg'  # Default seguro
+        else:
+            extension = 'jpg'
+
+        # Sanitizar email: solo alfanuméricos, guiones y underscores
+        safe_email = re.sub(r'[^a-zA-Z0-9_-]', '_', email.split('@')[0])
+
+        # Generar nombre único y seguro
+        filename = f"{safe_email}_{uuid.uuid4().hex[:8]}.{extension}"
+
+        # Construir path y validar que está dentro del directorio base
+        filepath = os.path.join(base_dir, filename)
+        # Resolver path absoluto y verificar que está dentro de base_dir
+        abs_base = os.path.abspath(base_dir)
+        abs_filepath = os.path.abspath(filepath)
+        if not abs_filepath.startswith(abs_base + os.sep):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid file path"
+            )
 
         # Guardar archivo
         with open(filepath, "wb") as f:
@@ -338,7 +365,7 @@ class UserService:
 
     def _save_cv_file(self, cv_file: UploadFile, email: str) -> str:
         """
-        Guarda un CV en el sistema de archivos
+        Guarda un CV en el sistema de archivos (seguro contra path injection)
 
         Args:
             cv_file: Archivo PDF del CV
@@ -347,12 +374,28 @@ class UserService:
         Returns:
             Nombre del archivo guardado
         """
-        # Crear directorio si no existe
-        os.makedirs("uploaded_cvs", exist_ok=True)
+        import re
 
-        # Generar nombre único
-        filename = f"{email.replace('@', '_')}_{uuid.uuid4().hex[:8]}.pdf"
-        filepath = os.path.join("uploaded_cvs", filename)
+        # Crear directorio si no existe
+        base_dir = "uploaded_cvs"
+        os.makedirs(base_dir, exist_ok=True)
+
+        # Sanitizar email: solo alfanuméricos, guiones y underscores
+        safe_email = re.sub(r'[^a-zA-Z0-9_-]', '_', email.split('@')[0])
+
+        # Generar nombre único y seguro (solo PDF permitido)
+        filename = f"{safe_email}_{uuid.uuid4().hex[:8]}.pdf"
+
+        # Construir path y validar que está dentro del directorio base
+        filepath = os.path.join(base_dir, filename)
+        # Resolver path absoluto y verificar que está dentro de base_dir
+        abs_base = os.path.abspath(base_dir)
+        abs_filepath = os.path.abspath(filepath)
+        if not abs_filepath.startswith(abs_base + os.sep):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid file path"
+            )
 
         # Guardar archivo
         with open(filepath, "wb") as f:
