@@ -350,7 +350,7 @@ jobs:
   # ============================================
   deploy-production:
     name: Deploy Backend to Production
-    needs: [cypress-tests]
+    needs: [cypress-tests, build-userapi]
     runs-on: ubuntu-latest
     environment:
       name: production
