@@ -59,29 +59,17 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - uses: google-github-actions/deploy-cloudrun@v2
+      - name: Deploy to Cloud Run QA
+        uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: userapi-qa
           image: ${{ needs.build-userapi.outputs.image }}
           region: ${{ env.REGION }}
-          env_vars: |
-            API_PORT=8080
-          secrets: |
-            DATABASE_URL=DATABASE_URL:latest
-            SECRET_KEY=SECRET_KEY:latest
-            EMAIL_USER=EMAIL_USER:latest
-            EMAIL_PASSWORD=EMAIL_PASSWORD:latest
-            INTERNAL_SERVICE_API_KEY=INTERNAL_SERVICE_API_KEY:latest
-            ACCESS_TOKEN_EXPIRE_MINUTES=ACCESS_TOKEN_EXPIRE_MINUTES:latest
-            ALGORITHM=ALGORITHM:latest
-          flags: |
-            --allow-unauthenticated
-            --add-cloudsql-instances=${{ env.PROJECT_ID }}:${{ env.REGION }}:userapi-db
-            --service-account=userapi-service-account@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
+          flags: --allow-unauthenticated --add-cloudsql-instances=${{ env.PROJECT_ID }}:${{ env.REGION }}:userapi-db --service-account=userapi-service-account@${{ env.PROJECT_ID }}.iam.gserviceaccount.com --set-secrets=DATABASE_URL=DATABASE_URL:latest,SECRET_KEY=SECRET_KEY:latest,EMAIL_USER=EMAIL_USER:latest,EMAIL_PASSWORD=EMAIL_PASSWORD:latest,INTERNAL_SERVICE_API_KEY=INTERNAL_SERVICE_API_KEY:latest,ACCESS_TOKEN_EXPIRE_MINUTES=ACCESS_TOKEN_EXPIRE_MINUTES:latest,ALGORITHM=ALGORITHM:latest
 
   deploy-production:
     name: Deploy to Production
-    needs: deploy-qa
+    needs: [build-userapi, deploy-qa]
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -91,22 +79,10 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - uses: google-github-actions/deploy-cloudrun@v2
+      - name: Deploy to Cloud Run Production
+        uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: userapi
           image: ${{ needs.build-userapi.outputs.image }}
           region: ${{ env.REGION }}
-          env_vars: |
-            API_PORT=8080
-          secrets: |
-            DATABASE_URL=DATABASE_URL:latest
-            SECRET_KEY=SECRET_KEY:latest
-            EMAIL_USER=EMAIL_USER:latest
-            EMAIL_PASSWORD=EMAIL_PASSWORD:latest
-            INTERNAL_SERVICE_API_KEY=INTERNAL_SERVICE_API_KEY:latest
-            ACCESS_TOKEN_EXPIRE_MINUTES=ACCESS_TOKEN_EXPIRE_MINUTES:latest
-            ALGORITHM=ALGORITHM:latest
-          flags: |
-            --allow-unauthenticated
-            --add-cloudsql-instances=${{ env.PROJECT_ID }}:${{ env.REGION }}:userapi-db
-            --service-account=userapi-service-account@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
+          flags: --allow-unauthenticated --add-cloudsql-instances=${{ env.PROJECT_ID }}:${{ env.REGION }}:userapi-db --service-account=userapi-service-account@${{ env.PROJECT_ID }}.iam.gserviceaccount.com --set-secrets=DATABASE_URL=DATABASE_URL:latest,SECRET_KEY=SECRET_KEY:latest,EMAIL_USER=EMAIL_USER:latest,EMAIL_PASSWORD=EMAIL_PASSWORD:latest,INTERNAL_SERVICE_API_KEY=INTERNAL_SERVICE_API_KEY:latest,ACCESS_TOKEN_EXPIRE_MINUTES=ACCESS_TOKEN_EXPIRE_MINUTES:latest,ALGORITHM=ALGORITHM:latest
