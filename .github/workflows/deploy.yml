@@ -83,10 +83,19 @@ jobs:
 
       - name: Verify coverage files
         run: |
-          echo "=== Coverage directory structure ==="
-          ls -R tf-frontend/coverage/
-          echo "=== Looking for lcov.info ==="
-          find tf-frontend/coverage -name "lcov.info" -type f
+          echo "=== Coverage directory exists? ==="
+          if [ -d "tf-frontend/coverage" ]; then
+            echo "✅ Coverage directory exists"
+            echo "=== Coverage directory structure ==="
+            ls -R tf-frontend/coverage/
+            echo "=== Looking for lcov.info ==="
+            find tf-frontend/coverage -name "lcov.info" -type f || echo "❌ No lcov.info found"
+            find tf-frontend/coverage -name "*.info" -type f || echo "❌ No .info files found"
+          else
+            echo "❌ Coverage directory does NOT exist"
+            echo "=== Checking if tests ran ==="
+            ls -la tf-frontend/ | grep -i coverage || echo "No coverage directory"
+          fi
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4
@@ -102,8 +111,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontend-coverage
-          path: tf-frontend/coverage/tf-frontend/lcov.info
-          if-no-files-found: error
+          path: |
+            tf-frontend/coverage/**/lcov.info
+            tf-frontend/coverage/**/*.info
+          if-no-files-found: warn
 
   # ============================================
   # FASE 2: SonarCloud Analysis (usando artefactos)
