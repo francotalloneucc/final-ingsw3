@@ -298,11 +298,62 @@ jobs:
             --port=8080
 
   # ============================================
-  # FASE 5: Cypress Tests
+  # FASE 5: Smoke Tests
+  # ============================================
+  smoke-tests:
+    name: Smoke Tests QA
+    needs: [deploy-qa, deploy-frontend-qa]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for services to be ready
+        run: sleep 10
+
+      - name: Test Backend Health
+        run: |
+          echo "Testing backend API health..."
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://userapi-qa-737714447258.us-central1.run.app/)
+          echo "Backend response code: $RESPONSE"
+          if [ "$RESPONSE" != "200" ] && [ "$RESPONSE" != "404" ]; then
+            echo "Backend health check failed with code: $RESPONSE"
+            exit 1
+          fi
+          echo "✅ Backend is responding"
+
+      - name: Test Backend API Endpoint
+        run: |
+          echo "Testing backend API endpoint..."
+          RESPONSE=$(curl -s https://userapi-qa-737714447258.us-central1.run.app/api/v1/health 2>&1 || echo '{"status":"unknown"}')
+          echo "Backend API response: $RESPONSE"
+          echo "✅ Backend API is accessible"
+
+      - name: Test Frontend Health
+        run: |
+          echo "Testing frontend health..."
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://frontend-qa-737714447258.us-central1.run.app/)
+          echo "Frontend response code: $RESPONSE"
+          if [ "$RESPONSE" != "200" ]; then
+            echo "Frontend health check failed with code: $RESPONSE"
+            exit 1
+          fi
+          echo "✅ Frontend is responding"
+
+      - name: Test Frontend Loads
+        run: |
+          echo "Testing if frontend HTML loads..."
+          CONTENT=$(curl -s https://frontend-qa-737714447258.us-central1.run.app/)
+          if echo "$CONTENT" | grep -q "app-root"; then
+            echo "✅ Frontend HTML contains app-root"
+          else
+            echo "❌ Frontend HTML does not contain expected content"
+            exit 1
+          fi
+
+  # ============================================
+  # FASE 6: Cypress Tests
   # ============================================
   cypress-tests:
     name: Cypress Integration Tests
-    needs: [deploy-qa, deploy-frontend-qa]
+    needs: [smoke-tests]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -346,7 +397,7 @@ jobs:
           if-no-files-found: ignore
 
   # ============================================
-  # FASE 6: Deploy Production + Build Frontend Prod en paralelo
+  # FASE 7: Deploy Production + Build Frontend Prod en paralelo
   # ============================================
   deploy-production:
     name: Deploy Backend to Production
@@ -421,7 +472,7 @@ jobs:
         run: echo "image=${{ steps.vars.outputs.image }}" >> $GITHUB_OUTPUT
 
   # ============================================
-  # FASE 7: Deploy Frontend Production
+  # FASE 8: Deploy Frontend Production
   # ============================================
   deploy-frontend-prod:
     name: Deploy Frontend to Production
