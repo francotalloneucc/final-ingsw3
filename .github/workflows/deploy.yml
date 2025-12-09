@@ -81,6 +81,13 @@ jobs:
           cd tf-frontend
           npm test -- --watch=false --code-coverage --browsers=ChromeHeadlessNoSandbox
 
+      - name: Verify coverage files
+        run: |
+          echo "=== Coverage directory structure ==="
+          ls -R tf-frontend/coverage/
+          echo "=== Looking for lcov.info ==="
+          find tf-frontend/coverage -name "lcov.info" -type f
+
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4
         with:
