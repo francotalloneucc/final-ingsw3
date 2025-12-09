@@ -102,7 +102,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontend-coverage
-          path: tf-frontend/coverage
+          path: tf-frontend/coverage/tf-frontend/lcov.info
           if-no-files-found: error
 
   # ============================================
@@ -135,31 +135,19 @@ jobs:
         run: |
           mkdir -p APIs/UserAPI tf-frontend/coverage
 
-          # Debug: Ver estructura de artefactos
-          echo "=== Backend artifacts ==="
-          find artifacts/backend -type f
-          echo "=== Frontend artifacts ==="
-          find artifacts/frontend -type f
-
-          # Buscar archivos de coverage
-          BACKEND_COV=$(find artifacts/backend -name 'coverage.xml' -type f | head -n1)
-          FRONTEND_LCOV=$(find artifacts/frontend -name 'lcov.info' -type f | head -n1)
-
-          # Verificar backend
-          if [ -z "$BACKEND_COV" ]; then
-            echo "❌ backend coverage.xml not found in artifacts"; exit 1;
+          # Copiar backend coverage (path directo)
+          if [ ! -f artifacts/backend/coverage.xml ]; then
+            echo "❌ backend coverage.xml not found"; exit 1;
           fi
-          echo "✅ Found backend coverage: $BACKEND_COV"
+          cp artifacts/backend/coverage.xml APIs/UserAPI/coverage.xml
+          echo "✅ Backend coverage copied"
 
-          # Verificar frontend
-          if [ -z "$FRONTEND_LCOV" ]; then
-            echo "❌ frontend lcov.info not found in artifacts"; exit 1;
+          # Copiar frontend coverage (path directo)
+          if [ ! -f artifacts/frontend/lcov.info ]; then
+            echo "❌ frontend lcov.info not found"; exit 1;
           fi
-          echo "✅ Found frontend coverage: $FRONTEND_LCOV"
-
-          # Copiar archivos
-          cp "$BACKEND_COV" APIs/UserAPI/coverage.xml
-          cp "$FRONTEND_LCOV" tf-frontend/coverage/lcov.info
+          cp artifacts/frontend/lcov.info tf-frontend/coverage/lcov.info
+          echo "✅ Frontend coverage copied"
 
       - name: Verify coverage reports
         run: |
