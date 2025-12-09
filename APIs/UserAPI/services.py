@@ -134,6 +134,7 @@ class UserService:
             genero=candidato_data.genero,
             fecha_nacimiento=candidato_data.fecha_nacimiento,
             role=UserRoleEnum.candidato,
+            verified=True,
             email_verified=True,
             profile_picture=profile_pic_filename
         )
@@ -188,6 +189,7 @@ class UserService:
             nombre=empresa_data.nombre,
             descripcion=empresa_data.descripcion,
             role=UserRoleEnum.empresa,
+            verified=True,
             email_verified=True,
             profile_picture=profile_pic_filename
         )
