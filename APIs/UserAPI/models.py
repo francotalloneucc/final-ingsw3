@@ -21,6 +21,7 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     role = Column(Enum(UserRoleEnum), nullable=False)
+    verified = Column(Boolean, default=True, nullable=False)
     email_verified = Column(Boolean, default=True, nullable=False)
 
     # Campos comunes
