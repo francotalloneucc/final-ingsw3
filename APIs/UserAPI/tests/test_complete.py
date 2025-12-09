@@ -67,7 +67,7 @@ def admin_token(client, test_db):
         hashed_password=get_password_hash("AdminPass123!"),
         nombre="Admin",
         role=UserRoleEnum.admin,
-        verified=True
+        email_verified=True
     )
     db.add(admin)
     db.commit()
